@@ -1,0 +1,387 @@
+--[[
+	NIXUS
+	Anti All Entities forced default ON
+	covers every entity you listed
+]]
+
+local repo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/"
+local Library = loadstring(game:HttpGet(repo .. "Library.lua"))()
+local ThemeManager = loadstring(game:HttpGet(repo .. "addons/ThemeManager.lua"))()
+local SaveManager = loadstring(game:HttpGet(repo .. "addons/SaveManager.lua"))()
+
+local Options = Library.Options
+local Toggles = Library.Toggles
+
+Library.ForceCheckbox = false
+Library.ShowToggleFrameInKeybinds = true
+
+local Window = Library:CreateWindow({
+	Title = "NIXUS",
+	Footer = "anti all",
+	Icon = 95816097006870,
+	NotifySide = "Right",
+	ShowCustomCursor = true,
+	Center = true,
+	AutoShow = true,
+	Resizable = true,
+})
+
+local Tabs = {
+	Main = Window:AddTab("Main", "user"),
+	Movement = Window:AddTab("Movement", "move"),
+	Visuals = Window:AddTab("Visuals", "eye"),
+	Anti = Window:AddTab("Anti Entity", "shield"),
+	Key = Window:AddKeyTab("Key System"),
+	["UI Settings"] = Window:AddTab("UI Settings", "settings"),
+}
+
+-- MAIN (kept for parity)
+local LeftGroupBox = Tabs.Main:AddLeftGroupbox("Groupbox")
+LeftGroupBox:AddToggle("MyToggle", { Text = "This is a toggle", Default = true })
+LeftGroupBox:AddCheckbox("MyCheckbox", { Text = "This is a checkbox", Default = true })
+LeftGroupBox:AddButton({ Text = "Button", Func = function() Library:Notify("Button", 2) end })
+LeftGroupBox:AddButton({ Text = "Sub Button", Func = function() end })
+LeftGroupBox:AddLabel("This is a label")
+LeftGroupBox:AddLabel("This is a label\nwhich wraps its text!", true)
+LeftGroupBox:AddSlider("MySlider", { Text = "This is my slider!", Default = 3, Min = 0, Max = 5, Rounding = 1 })
+LeftGroupBox:AddInput("MyTextbox", { Default = "My textbox!", Text = "This is a textbox" })
+LeftGroupBox:AddLabel("Color"):AddColorPicker("ColorPicker", { Default = Color3.fromRGB(0, 255, 140) })
+LeftGroupBox:AddLabel("Keybind"):AddKeyPicker("KeyPicker", { Default = "MB2", Mode = "Toggle", Text = "Auto Farm" })
+
+local DropdownGroupBox = Tabs.Main:AddRightGroupbox("Dropdowns")
+DropdownGroupBox:AddDropdown("MyDropdown", { Values = {"This","is","a","dropdown"}, Default = 1, Text = "A dropdown" })
+DropdownGroupBox:AddDropdown("MySearchableDropdown", { Values = {"This","is","a","searchable","dropdown"}, Default = 1, Text = "A searchable dropdown", Searchable = true })
+DropdownGroupBox:AddDropdown("MyMultiDropdown", { Values = {"This","is","a","dropdown"}, Default = 1, Multi = true, Text = "A multi dropdown" })
+DropdownGroupBox:AddDropdown("MyPlayerDropdown", { SpecialType = "Player", Text = "A player dropdown" })
+DropdownGroupBox:AddDropdown("MyTeamDropdown", { SpecialType = "Team", Text = "A team dropdown" })
+
+-- MOVEMENT
+local MoveBox = Tabs.Movement:AddLeftGroupbox("Movement")
+MoveBox:AddSlider("WalkSpeed", {
+	Text = "WalkSpeed", Default = 16, Min = 16, Max = 250, Rounding = 0,
+	Callback = function(v)
+		local h = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		if h then h.WalkSpeed = v end
+	end,
+})
+MoveBox:AddSlider("JumpPower", {
+	Text = "JumpPower", Default = 50, Min = 50, Max = 250, Rounding = 0,
+	Callback = function(v)
+		local h = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+		if h then h.UseJumpPower = true h.JumpPower = v end
+	end,
+})
+MoveBox:AddToggle("LockSpeed", {
+	Text = "Lock WalkSpeed", Default = false,
+	Callback = function(on)
+		if on then
+			task.spawn(function()
+				while Toggles.LockSpeed.Value do
+					local h = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+					if h then h.WalkSpeed = Options.WalkSpeed.Value end
+					task.wait(0.08)
+				end
+			end)
+		end
+	end,
+})
+MoveBox:AddToggle("InfJump", { Text = "Infinite Jump", Default = false })
+
+-- VISUALS
+local VisLeft = Tabs.Visuals:AddLeftGroupbox("ESP")
+VisLeft:AddToggle("PlayerESP", { Text = "Player ESP", Default = false })
+VisLeft:AddToggle("DoorESP", { Text = "Door ESP", Default = false })
+VisLeft:AddButton({ Text = "Refresh Lists", Func = function() refreshLists() end })
+
+local VisRight = Tabs.Visuals:AddRightGroupbox("Door Bypass")
+VisRight:AddToggle("DoorBypass", { Text = "Unlock All Doors", Default = false })
+VisRight:AddButton({
+	Text = "Fire Door Remotes",
+	Func = function()
+		local count = 0
+		for _, rem in ipairs(game:GetDescendants()) do
+			if rem:IsA("RemoteEvent") then
+				local n = string.lower(rem.Name)
+				if string.find(n, "door") or string.find(n, "unlock") or string.find(n, "open") or string.find(n, "gate") then
+					pcall(function() rem:FireServer() rem:FireServer(true) rem:FireServer("Open") end)
+					count += 1
+				end
+			end
+		end
+		Library:Notify("Fired " .. count .. " door remotes", 3)
+	end,
+})
+
+-- =========================================================
+-- ANTI ENTITY — ANTI ALL DEFAULT ON
+-- =========================================================
+local AntiBox = Tabs.Anti:AddLeftGroupbox("Anti Entities")
+
+AntiBox:AddToggle("AntiAll", {
+	Text = "Anti All Entities",
+	Default = true,          -- forced on
+	Tooltip = "Removes every deadly entity the moment it spawns",
+})
+
+AntiBox:AddLabel("Covers:\nRush Ambush Seek Figure Screech Eyes Halt Dupe Hide\nTimothy Jack Shadow Void Snare Dread Sally Window\nGiggle Gloombats Grumble Queen Grumble Louie Dam Seek\nBlitz Haste Lookman A-60 A-90 A-120\nGroundskeeper Mandrake Monument Eyestalk Bramble Surge Caw Grampy World Lotus\nHoncho Alma Teller Ransom Drones Bash Scribbles Forget-Me-Not Portrait Fih Creak Noise Stem Cobbler Meld Hijack\nUnnamed Red Light Glitch")
+
+AntiBox:AddDivider()
+AntiBox:AddLabel("Friendly / optional (off by default)")
+AntiBox:AddToggle("AntiJeff", { Text = "Also remove Jeff", Default = false })
+AntiBox:AddToggle("AntiElGoblino", { Text = "Also remove El Goblino", Default = false })
+AntiBox:AddToggle("AntiBob", { Text = "Also remove Bob", Default = false })
+AntiBox:AddToggle("AntiGuidingLight", { Text = "Also remove Guiding Light", Default = false })
+AntiBox:AddToggle("AntiCuriousLight", { Text = "Also remove Curious Light", Default = false })
+
+-- KEY
+Tabs.Key:AddLabel({ Text = "Key: NIXUS", DoesWrap = true, Size = 16 })
+Tabs.Key:AddKeyBox(function(key)
+	local ok = string.upper(tostring(key or "")) == "NIXUS"
+	Library:Notify(ok and "Key accepted" or "Invalid key", 3)
+	return ok
+end)
+
+-- UI SETTINGS
+local MenuGroup = Tabs["UI Settings"]:AddLeftGroupbox("Menu")
+MenuGroup:AddToggle("KeybindMenuOpen", {
+	Default = Library.KeybindFrame.Visible,
+	Text = "Open Keybind Menu",
+	Callback = function(v) Library.KeybindFrame.Visible = v end,
+})
+MenuGroup:AddToggle("ShowCustomCursor", {
+	Text = "Custom Cursor", Default = true,
+	Callback = function(v) Library.ShowCustomCursor = v end,
+})
+MenuGroup:AddDropdown("NotificationSide", {
+	Values = {"Left","Right"}, Default = "Right", Text = "Notification Side",
+	Callback = function(v) Library:SetNotifySide(v) end,
+})
+MenuGroup:AddDropdown("DPIDropdown", {
+	Values = {"50%","75%","100%","125%","150%","175%","200%"}, Default = "100%", Text = "DPI Scale",
+	Callback = function(v) Library:SetDPIScale(tonumber(v:gsub("%%",""))) end,
+})
+MenuGroup:AddDivider()
+MenuGroup:AddLabel("Menu bind"):AddKeyPicker("MenuKeybind", { Default = "RightShift", NoUI = true, Text = "Menu keybind" })
+MenuGroup:AddButton("Unload", function() Library:Unload() end)
+
+Library.ToggleKeybind = Options.MenuKeybind
+ThemeManager:SetLibrary(Library)
+SaveManager:SetLibrary(Library)
+SaveManager:IgnoreThemeSettings()
+SaveManager:SetIgnoreIndexes({"MenuKeybind"})
+ThemeManager:SetFolder("NIXUS")
+SaveManager:SetFolder("NIXUS/configs")
+SaveManager:BuildConfigSection(Tabs["UI Settings"])
+ThemeManager:ApplyToTab(Tabs["UI Settings"])
+SaveManager:LoadAutoloadConfig()
+
+-- =========================================================
+-- CORE
+-- =========================================================
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local CoreGui = game:GetService("CoreGui")
+local LP = Players.LocalPlayer
+
+local State = { DoorList = {}, PlayerList = {} }
+
+pcall(function()
+	if CoreGui:FindFirstChild("NIXUS_ESP") then CoreGui.NIXUS_ESP:Destroy() end
+end)
+
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "NIXUS_ESP"
+ESPFolder.Parent = CoreGui
+
+local function clearESP()
+	for _, c in ipairs(ESPFolder:GetChildren()) do c:Destroy() end
+end
+
+local function makeBillboard(adornee, text, color)
+	local bb = Instance.new("BillboardGui")
+	bb.Adornee = adornee
+	bb.Size = UDim2.new(0, 130, 0, 28)
+	bb.StudsOffset = Vector3.new(0, 2.7, 0)
+	bb.AlwaysOnTop = true
+	bb.Parent = ESPFolder
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(1, 0, 1, 0)
+	lbl.BackgroundTransparency = 0.3
+	lbl.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+	lbl.Text = text
+	lbl.TextColor3 = color
+	lbl.Font = Enum.Font.GothamBold
+	lbl.TextSize = 12
+	lbl.Parent = bb
+	Instance.new("UICorner", lbl).CornerRadius = UDim.new(0, 4)
+end
+
+function refreshLists()
+	State.DoorList = {}
+	State.PlayerList = {}
+	for _, obj in ipairs(workspace:GetDescendants()) do
+		local n = string.lower(obj.Name)
+		if (string.find(n, "door") or string.find(n, "gate") or string.find(n, "entrance"))
+			and (obj:IsA("BasePart") or obj:IsA("Model") or obj:IsA("Folder")) then
+			table.insert(State.DoorList, obj)
+		end
+	end
+	for _, plr in ipairs(Players:GetPlayers()) do
+		if plr ~= LP then table.insert(State.PlayerList, plr) end
+	end
+	Library:Notify(string.format("Doors: %d | Players: %d", #State.DoorList, #State.PlayerList), 3)
+end
+
+RunService.RenderStepped:Connect(function()
+	if not (Toggles.PlayerESP.Value or Toggles.DoorESP.Value) then
+		clearESP()
+		return
+	end
+	clearESP()
+	if Toggles.PlayerESP.Value then
+		for _, plr in ipairs(Players:GetPlayers()) do
+			if plr ~= LP and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+				makeBillboard(plr.Character.HumanoidRootPart, plr.Name, Color3.fromRGB(100, 180, 255))
+			end
+		end
+	end
+	if Toggles.DoorESP.Value then
+		for _, d in ipairs(State.DoorList) do
+			local part = d:IsA("BasePart") and d or d:FindFirstChildWhichIsA("BasePart", true)
+			if part then makeBillboard(part, d.Name, Color3.fromRGB(100, 255, 140)) end
+		end
+	end
+end)
+
+task.spawn(function()
+	while true do
+		if Toggles.DoorBypass and Toggles.DoorBypass.Value then
+			for _, d in ipairs(State.DoorList) do
+				pcall(function()
+					if d:IsA("BasePart") then d.CanCollide = false end
+					for _, c in ipairs(d:GetDescendants()) do
+						if c:IsA("BasePart") then c.CanCollide = false end
+						if c:IsA("ProximityPrompt") then
+							c.Enabled = true
+							c.HoldDuration = 0
+							c.MaxActivationDistance = 45
+						end
+					end
+				end)
+			end
+		end
+		task.wait(0.28)
+	end
+end)
+
+UserInputService.JumpRequest:Connect(function()
+	if Toggles.InfJump and Toggles.InfJump.Value then
+		local h = LP.Character and LP.Character:FindFirstChildOfClass("Humanoid")
+		if h then h:ChangeState(Enum.HumanoidStateType.Jumping) end
+	end
+end)
+
+LP.CharacterAdded:Connect(function(c)
+	local h = c:WaitForChild("Humanoid", 5)
+	if h then
+		h.WalkSpeed = Options.WalkSpeed.Value
+		h.UseJumpPower = true
+		h.JumpPower = Options.JumpPower.Value
+	end
+end)
+
+-- =========================================================
+-- ANTI ALL ENGINE (default on)
+-- =========================================================
+local KillList = {
+	-- Hotel
+	"Rush", "Ambush", "Seek", "Figure", "Screech", "Eyes", "Halt", "Dupe", "Hide",
+	"Timothy", "Jack", "Shadow", "Void", "Snare", "Dread", "Sally", "Window",
+	-- Mines
+	"Giggle", "Gloombats", "Grumble", "Queen Grumble", "Louie", "Dam Seek",
+	-- Backdoor / Rooms
+	"Blitz", "Haste", "Lookman", "A-60", "A-90", "A-120", "A60", "A90", "A120",
+	-- Great Outdoors
+	"The Groundskeeper", "Mandrake", "Monument", "Eyestalk", "Bramble", "Surge", "Caw", "Grampy", "The World Lotus",
+	-- Archives / Stairwell
+	"Honcho", "Alma", "Teller", "Ransom", "Drones", "Bash", "Scribbles", "Forget-Me-Not",
+	"Portrait", "Fih", "Creak", "Noise", "Stem", "Cobbler", "Meld", "Hijack",
+	-- Glitch / Red
+	"The Unnamed Red Light", "Glitch",
+	-- internal / moving names
+	"RushMoving", "AmbushMoving", "SeekMoving", "FigureRig",
+}
+
+local OptionalKill = {
+	Jeff = "AntiJeff",
+	["El Goblino"] = "AntiElGoblino",
+	Bob = "AntiBob",
+	["Guiding Light"] = "AntiGuidingLight",
+	["Curious Light"] = "AntiCuriousLight",
+}
+
+local function neutralize(obj)
+	pcall(function() obj:Destroy() end)
+	pcall(function()
+		if obj.Parent then obj.Parent = nil end
+		for _, c in ipairs(obj:GetDescendants()) do
+			if c:IsA("BasePart") then
+				c.CanCollide = false
+				c.Transparency = 1
+				c.Anchored = true
+			end
+			if c:IsA("Sound") then
+				c:Stop()
+				c.Volume = 0
+			end
+			if c:IsA("ProximityPrompt") or c:IsA("ClickDetector") then
+				c.Enabled = false
+			end
+		end
+	end)
+end
+
+local function shouldKill(name)
+	if not (Toggles.AntiAll and Toggles.AntiAll.Value) then return false end
+	for _, n in ipairs(KillList) do
+		if name == n then return true end
+	end
+	for realName, toggleName in pairs(OptionalKill) do
+		if name == realName and Toggles[toggleName] and Toggles[toggleName].Value then
+			return true
+		end
+	end
+	return false
+end
+
+task.spawn(function()
+	while true do
+		if Toggles.AntiAll and Toggles.AntiAll.Value then
+			for _, obj in ipairs(workspace:GetDescendants()) do
+				if shouldKill(obj.Name) then
+					neutralize(obj)
+				end
+			end
+			for _, folderName in ipairs({"Entities", "CurrentRooms", "Rooms", "GameObjects"}) do
+				local folder = workspace:FindFirstChild(folderName)
+				if folder then
+					for _, obj in ipairs(folder:GetDescendants()) do
+						if shouldKill(obj.Name) then
+							neutralize(obj)
+						end
+					end
+				end
+			end
+		end
+		task.wait(0.11)
+	end
+end)
+
+task.defer(function()
+	task.wait(1.2)
+	refreshLists()
+end)
+
+Library:Notify("NIXUS — Anti All Entities ON", 4)
+print("[NIXUS] anti all online")
